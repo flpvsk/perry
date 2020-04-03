@@ -9,13 +9,27 @@ local frame
 function _init()
   perry = {
     x=64,
-    y=64
+    y=64,
+    xSpeed=2,
+    ySpeed=10
   }
   frame = 0
 end
 
 function _update()
   frame += 1
+
+  if btn(0) then
+    perry.x -= perry.xSpeed
+  end
+
+  if btn(1) then
+    perry.x += perry.xSpeed
+  end
+
+  if btnp(2) then
+    perry.y -= 10
+  end
 end
 
 function _draw()
