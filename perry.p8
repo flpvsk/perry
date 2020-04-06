@@ -6,6 +6,8 @@ __lua__
 local perry
 local frame
 local gravity
+local bullets
+
 local WALL_START = 48
 local WALL_END = 48
 local PI = 3.14
@@ -28,10 +30,14 @@ function _init()
       start={0, 0},
       direction={0, 0},
       speed=0
-    }
+    },
+    weaponDelay=10,
+    weaponSpeed=4,
+    lastShotFrame=-100
   }
   frame = 0
   gravity = 2.4
+  bullets = { }
 end
 
 function _update()
@@ -39,19 +45,23 @@ function _update()
   local direction = {0, 0}
 
   if btn(0) then
-    direction[1] -= 1
+    direction[1] = -1
   end
 
   if btn(1) then
-    direction[2] += 1
+    direction[1] = 1
   end
 
   if btn(2) then
-    direction[2] -= 1
+    direction[2] = -1
   end
 
   if btn(3) then
-    direction[2] += 1
+    direction[2] = 1
+  end
+
+  if direction[1] == 0 and direction[2] == 0 then
+    direction[1] = 1
   end
 
   perry.direction = direction
@@ -68,11 +78,21 @@ function _update()
   local mapBelow = getMapTile(below, { 0, 0 })
   local mapAbove = getMapTile(pos, { 0, -1 })
 
-  debug = tostr(pos[1])
-
   local isOnGround = isWall(mapBelow)
   if not isOnGround then
     perry.position[2] += gravity
+  end
+
+  debug = ""
+  if btn(5) and perry.lastShotFrame + perry.weaponDelay < frame then
+    local bullet = {
+      direction=direction,
+      start={ pos[1], pos[2] },
+      frame=frame,
+      speed=perry.weaponSpeed
+    }
+    add(bullets, bullet)
+    perry.lastShotFrame = frame
   end
 
   if (btnp(4) and not isJumping and isOnGround) then
@@ -101,6 +121,31 @@ function _update()
     )
   end
 
+  for bullet in all(bullets) do
+    local frames = frame - bullet.frame
+
+    progress = flr(frames * bullet.speed)
+    bullet.position = {
+      bullet.start[1] +
+      progress * bullet.direction[1] +
+      bullet.direction[1],
+      bullet.start[2] +
+      progress * bullet.direction[2] +
+      bullet.direction[2]
+    }
+
+    if (
+      bullet.position[1] > 128 or
+      bullet.position[2] > 128 or
+      bullet.position[1] < 0 or
+      bullet.position[2] < 0
+    ) then
+      bullet.isRemoved = true
+    end
+
+  end
+
+  bullets = filter(bullets, isNotRemoved)
 end
 
 function _draw()
@@ -108,8 +153,11 @@ function _draw()
   map(0, 0, 0, 0)
 
   -- print(perry.impulse.start[2], perry.position[1], perry.position[2] - 6)
-  print(debug)
   spr(mod(frame / 8, 2), perry.position[1], perry.position[2])
+
+  for bullet in all(bullets) do
+    spr(2, bullet.position[1], bullet.position[2])
+  end
 end
 
 
@@ -151,12 +199,27 @@ function roundPosition(pos)
   }
 end
 
+function filter(arr, func)
+  local newArr = {}
+  for oldIndex, v in pairs(arr) do
+    if func(v, oldIndex) then
+      add(newArr, v)
+    end
+  end
+  return newArr
+end
+
+function isNotRemoved(v)
+  return not v.isRemoved
+end
+
+
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00077000000770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00707700000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000007777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000000770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00707700000700000008800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000007777000088880000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000000770000008800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00700700007007000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
