@@ -31,7 +31,7 @@ function _init()
       direction={0, 0},
       speed=0
     },
-    weaponDelay=10,
+    weaponDelay=5,
     weaponSpeed=4,
     lastShotFrame=-100
   }
@@ -95,7 +95,7 @@ function _update()
     perry.lastShotFrame = frame
   end
 
-  if (btnp(4) and not isJumping and isOnGround) then
+  if (btn(4) and not isJumping and isOnGround) then
     perry.impulse = {
       frame=frame,
       start={ perry.position[1], perry.position[2] },
