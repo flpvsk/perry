@@ -11,6 +11,9 @@ local WALL_END = 48
 local PI = 3.14
 local debug = ""
 
+
+-- new updates from andrey
+
 function _init()
   local jumpSpeed = 14
   perry = {
