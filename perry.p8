@@ -5,12 +5,19 @@ __lua__
 
 local perry
 local frame
+local gravity
+local WALL_START = 48
+local WALL_END = 48
+local PI = 3.14
+local debug = ""
 
 function _init()
+  local jumpSpeed = 14
   perry = {
-    position={64, 64},
+    position={0, 114 - jumpSpeed},
+    size={8, 8},
     moveSpeed=2,
-    jumpSpeed=10,
+    jumpSpeed=jumpSpeed,
     jumpDuration=10,
     direction={0, 0},
     impulse={
@@ -21,6 +28,7 @@ function _init()
     }
   }
   frame = 0
+  gravity = 2.4
 end
 
 function _update()
@@ -45,20 +53,34 @@ function _update()
 
   perry.direction = direction
 
+  local pos = roundPosition(perry.position)
+  perry.position = pos
+
   local isJumping = perry.impulse.frame + perry.jumpDuration > frame
 
-  if (btnp(4) and not isJumping) then
-    direction[2] = 1
-    perry.impulse = {
-      frame=frame,
-      start=perry.position,
-      direction=direction,
-      speed=perry.jumpSpeed
-    }
-    return
+  local right = { pos[1] + perry.size[1] - 1, pos[2] }
+  local below = { pos[1], pos[2] + perry.size[2] - 1 }
+  local mapLeft = getMapTile(pos, { -1, 0 })
+  local mapRight = getMapTile(right, { -1, 0 })
+  local mapBelow = getMapTile(below, { 0, 0 })
+  local mapAbove = getMapTile(pos, { 0, -1 })
+
+  debug = tostr(pos[1])
+
+  local isOnGround = isWall(mapBelow)
+  if not isOnGround then
+    perry.position[2] += gravity
   end
 
-  if btn(0) then
+  if (btnp(4) and not isJumping and isOnGround) then
+    perry.impulse = {
+      frame=frame,
+      start={ perry.position[1], perry.position[2] },
+      speed=perry.jumpSpeed
+    }
+  end
+
+  if btn(0) and pos[1] > 0 then
     perry.position[1] -= perry.moveSpeed
   end
 
@@ -67,9 +89,13 @@ function _update()
   end
 
   if isJumping then
-    local progress = (
-      perry.impulse.frame + perry.jumpDuration - frame
+    local jumpProgress = (
+      frame - perry.impulse.frame
     ) / perry.jumpDuration
+    perry.position[2] = (
+      perry.impulse.start[2] -
+      easeJump(jumpProgress) * perry.jumpSpeed
+    )
   end
 
 end
@@ -78,17 +104,48 @@ function _draw()
   cls()
   map(0, 0, 0, 0)
 
-  local progress = (
-    perry.impulse.frame + perry.jumpDuration - frame
-  ) / perry.jumpDuration
-  local i = perry.impulse
-  print(progress, perry.position[1], perry.position[2] - 6)
+  -- print(perry.impulse.start[2], perry.position[1], perry.position[2] - 6)
+  print(debug)
   spr(mod(frame / 8, 2), perry.position[1], perry.position[2])
 end
 
 
 function mod(x, base)
   return x - flr(x / base) * base
+end
+
+function getMapTile(point, inc)
+  inc = inc or { 0, 0}
+  local col = flr((point[1] + (inc[1] or 0)) / 8)
+  local row = flr((point[2] + (inc[1] or 0)) / 8)
+  return mget(col, row)
+end
+
+function isWall(tile)
+  return (
+    tile >= WALL_START and
+    tile <= WALL_END
+  )
+end
+
+function easeJump(progress)
+  local u0 = 0
+  local u1 = 0.75
+  local u2 = 0.95
+  local u3 = 1
+  return (
+    u0 * (1 - progress) ^ 3 +
+    u1 * 3 * progress * (1 - progress) ^ 2 +
+    u2 * 3 * progress ^ 2 * (1 - progress) +
+    u3 * progress ^ 3
+  )
+end
+
+function roundPosition(pos)
+  return {
+    flr(pos[1] + 0.5),
+    flr(pos[2] + 0.5)
+  }
 end
 
 __gfx__
