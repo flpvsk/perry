@@ -29,6 +29,7 @@ function _init()
   perry = {
     position={0, 114 - jumpSpeed},
     size={8, 8},
+    state="still",
     acceleration=0.5,
     maxSpeed=2,
     currentSpeed=0,
@@ -126,10 +127,12 @@ function _update()
 
   perry.currentSpeed *= friction
   if btn(0) then
+    perry.state = "running"
     perry.currentSpeed -= perry.acceleration
   end
 
   if btn(1) then
+    perry.state = "running"
     perry.currentSpeed += perry.acceleration
   end
 
@@ -142,6 +145,11 @@ function _update()
   if (abs(perry.currentSpeed) < 0.1) then
     perry.currentSpeed = 0
   end
+
+  if not btn(0) and not btn(1) and abs(perry.currentSpeed) > 0.01 then
+    perry.state = "sliding"
+  end
+
 
   movement[1] = perry.currentSpeed
 
