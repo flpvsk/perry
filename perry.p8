@@ -6,6 +6,7 @@ __lua__
 local perry
 local frame
 local gravity
+local friction
 local bullets
 
 local PI = 3.14
@@ -28,7 +29,9 @@ function _init()
   perry = {
     position={0, 114 - jumpSpeed},
     size={8, 8},
-    moveSpeed=2,
+    acceleration=0.5,
+    maxSpeed=2,
+    currentSpeed=0,
     jumpSpeed=jumpSpeed,
     jumpDuration=10,
     direction={0, 0},
@@ -39,13 +42,14 @@ function _init()
   }
   frame = 0
   gravity = 2.4
+  friction = 0.6
   bullets = { }
   cam = {0,0}
 end
 
 function _update()
   frame += 1
-  local direction = {0, 0}
+  local direction = {perry.direction[1], 0}
   local movement = {0, 0}
 
   if btn(0) then
@@ -105,14 +109,6 @@ function _update()
     }
   end
 
-  if btn(0) and pos[1] > 0 then
-    movement[1] -= perry.moveSpeed
-  end
-
-  if btn(1) then
-    movement[1] += perry.moveSpeed
-  end
-
   if isJumping then
     local jumpProgress = (
       frame - perry.impulse.frame
@@ -127,6 +123,27 @@ function _update()
       easeJump(jumpProgress) - easeJump(jumpProgressPrev)
     )
   end
+
+  perry.currentSpeed *= friction
+  if btn(0) then
+    perry.currentSpeed -= perry.acceleration
+  end
+
+  if btn(1) then
+    perry.currentSpeed += perry.acceleration
+  end
+
+  perry.currentSpeed = mid(
+    -perry.maxSpeed,
+    perry.currentSpeed,
+    perry.maxSpeed
+  )
+
+  if (abs(perry.currentSpeed) < 0.1) then
+    perry.currentSpeed = 0
+  end
+
+  movement[1] = perry.currentSpeed
 
   local newPos = { pos[1], pos[2] }
   local hDir = sgn(movement[1])
@@ -151,14 +168,23 @@ function _update()
     )
 
     if didCollide then
+      perry.currentSpeed = 0
       break
     end
 
     newX = newPos[1] + hDir
+
+    if newX < 0 or newX > WORLD_X - perry.size[1] then
+      perry.currentSpeed = 0
+    end
+
+
     newX = max(0, newX)
     newX = min(WORLD_X - perry.size[1], newX)
     newPos = { newX, newPos[2] }
   end
+
+  debug = perry.currentSpeed
 
   for j = 0, movement[2], vDir do
     if movement[2] == 0 then
@@ -226,7 +252,7 @@ function _draw()
   cls()
   map(0, 0, 0, 0)
 
-  print(debug)
+  print(debug, cam[1], cam[2])
 
   spr(mod(frame / 8, 2), perry.position[1], perry.position[2])
 
