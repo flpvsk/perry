@@ -306,7 +306,7 @@ function _draw()
   end
 
   spr(
-    16 + 2 * perrySprite,
+    2 * perrySprite,
     perry.position[1],
     perry.position[2],
     2,
